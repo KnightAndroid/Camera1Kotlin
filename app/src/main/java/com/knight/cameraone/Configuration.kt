@@ -25,4 +25,32 @@ object  Configuration {
     val insidePath : String = "/data/data/com.knight.cameraone/pic/"
     //外部路径
     val OUTPATH :String = Environment.getExternalStorageDirectory().toString() + "/拍照-相册/"
+
+
+    //问题梳理：
+    //基本类型-double
+    const val testDouble = 3.00
+    //基本类型-Float
+    const val testFloat = 3.0F
+    //基本类型-Long
+    const val testLong = 3L
+    //基本类型-Int
+    const val testInt = 3
+    //基本类型-Boolean
+    const val testBoolean = true
+
+    //String
+    const val testString = "ssss"
+
+
+
+
+    //常量数组
+    val testArray:Array<String> = arrayOf("java","kotlin") //爆红const val has type “Array<String>” only primitives and String are allowed
+    //原因：
+    //const 来修饰它
+    //只适用于所有的 基础数据类型 的属性，以及 String类型
+    //其他类型的数据比如Array<String>使用时会报 Const ‘val’ has type ‘XXXX’. Only primitives and String are allowed 错误）
+
+
 }

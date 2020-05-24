@@ -74,6 +74,14 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
     //检测头像的FaceView
     private var mFaceView:FaceDeteView?= null
 
+    private var isFull = false
+
+
+    fun setFull(full : Boolean){
+        isFull = full
+
+    }
+
     //自定义回调
     interface CameraCallBack {
         //预览帧回调
@@ -411,8 +419,12 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
             mParameters = camera?.parameters
             //设置预览格式
             mParameters?.previewFormat = ImageFormat.NV21
-            mParameters?.exposureCompensation = 5
-            setPreviewSize()
+            //mParameters?.exposureCompensation = 5
+            if(isFull){
+                setPreviewSize(screenWidth,screenHeight)
+            } else {
+                setPreviewSize(mSurfaceView.measuredWidth,mSurfaceView.measuredHeight)
+            }
             setPictureSize()
             //连续自动对焦图像
             if (isSupportFocus(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
@@ -433,7 +445,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
      *
      * 设置预览界面尺寸
      */
-    fun setPreviewSize() {
+    fun setPreviewSize(width:Int,height:Int) {
         //获取系统支持预览大小
         var localSizes: List<Camera.Size> = mParameters?.supportedPreviewSizes!!
         var biggestSize: Camera.Size? = null //最大分辨率
@@ -441,30 +453,46 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
         var targetSize: Camera.Size? = null//没有屏幕分辨率就取跟屏幕分辨率相近(大)的size
         var targetSize2: Camera.Size? = null//没有屏幕分辨率就取跟屏幕分辨率相近(小)的size
         var cameraSizeLength: Int = localSizes.size
-        for (index in 0 until cameraSizeLength) {
-            var size: Camera.Size = localSizes[index]
-            if (biggestSize == null || (size.width >= biggestSize.width && size.height >= biggestSize.height)) {
-                biggestSize = size
-            }
 
-            //如果支持的比例都等于所获取到的宽高
-            if (size.width == screenHeight && size.height == screenWidth) {
-                fitSize = size
-                //如果任一宽高等于所支持的尺寸
-            } else if (size.width == screenHeight || size.height == screenWidth) {
-                if (targetSize == null) {
-                    targetSize = size
-                } else if (size.width < screenHeight || size.height < screenWidth) {
-                    targetSize2 = size
+        if(width.toFloat() / height == 3.0f / 4){
+
+            for(index in 0 until cameraSizeLength){
+                var size : Camera.Size = localSizes[index]
+                if(size.width.toFloat() / size.height == 4/0f / 3){
+                    mParameters?.setPreviewSize(size.width,size.height)
+                    break
+                }
+
+            }
+        } else {
+            for (index in 0 until cameraSizeLength) {
+                var size: Camera.Size = localSizes[index]
+                if (biggestSize == null || (size.width >= biggestSize.width && size.height >= biggestSize.height)) {
+                    biggestSize = size
+                }
+
+                //如果支持的比例都等于所获取到的宽高
+                if (size.width == screenHeight && size.height == screenWidth) {
+                    fitSize = size
+                    //如果任一宽高等于所支持的尺寸
+                } else if (size.width == screenHeight || size.height == screenWidth) {
+                    if (targetSize == null) {
+                        targetSize = size
+                    } else if (size.width < screenHeight || size.height < screenWidth) {
+                        targetSize2 = size
+                    }
                 }
             }
+
+            fitSize ?: targetSize
+            fitSize ?: targetSize2
+            fitSize ?: biggestSize
+
+            mParameters?.setPreviewSize(fitSize?.width!!, fitSize?.height!!)
         }
 
-        fitSize ?: targetSize
-        fitSize ?: targetSize2
-        fitSize ?: biggestSize
 
-        mParameters?.setPreviewSize(fitSize?.width!!, fitSize?.height!!)
+
 
     }
 
@@ -828,7 +856,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
             Log.d("sssd视频宽高：", "宽" + width + "高" + height + "")
             it.setVideoSize(width, height)
             //每秒的帧数
-            it.setVideoFrameRate(24)
+            it.setVideoFrameRate(20)
 
             //调视频旋转角度 如果不设置 后置和前置都会被旋转播放
             if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT) {

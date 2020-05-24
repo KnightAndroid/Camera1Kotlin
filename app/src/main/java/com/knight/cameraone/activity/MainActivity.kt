@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
+import com.knight.cameraone.Configuration
 import com.knight.cameraone.R
 import com.knight.cameraone.utils.Permissions
 import com.knight.cameraone.utils.PhotoAlbumUtil
@@ -26,6 +27,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
+
+
+    var test1:Int? = null
+    var test2:Int? = 0
 
     //拍照照片的路径
     private var cameraSavePath: File?=null
@@ -154,6 +159,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         //设置Type
         intent.type = "image/*"
         startActivityForResult(intent,2)
+
+
+
+        var test = Configuration.testArray[0]
     }
 
 

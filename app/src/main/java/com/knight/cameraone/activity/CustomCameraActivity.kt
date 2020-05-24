@@ -5,10 +5,12 @@ import android.content.Intent
 import android.graphics.RectF
 import android.hardware.Camera
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.OrientationHelper
 import com.bumptech.glide.Glide
@@ -75,6 +77,8 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
     //人脸检测框
     var faceView:FaceDeteView?=null
 
+    var isFull :Boolean = false
+
     @SuppressLint("WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,6 +129,27 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
                 mCameraPresenter?.turnFaceDetect(isFaceDetect)
                 tv_facedetect.setBackgroundResource(if(isFaceDetect)R.drawable.icon_facedetect_on else R.drawable.icon_facedetect_off)
                 isFaceDetect = !isFaceDetect
+            }
+            //切换全屏还是4：3
+            R.id.tv_matchorwrap -> {
+                cl_parent.removeView(sf_camera)
+                var screen : Array<Int> = getScreent()
+                //定义布局参数
+                var layoutParams : ConstraintLayout.LayoutParams = ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT,ConstraintLayout.LayoutParams.WRAP_CONTENT)
+                if(isFull){
+                    //是全屏 切换成4：3
+                    layoutParams.width = screen[0]
+                    layoutParams.height = screen[0] * 4/3
+                } else {
+                    //不是全屏
+                    //是全屏 切换成4：3
+                    layoutParams.width = screen[0]
+                    layoutParams.height = screen[1]
+                }
+                sf_camera.layoutParams = layoutParams
+                isFull = !isFull
+                mCameraPresenter?.setFull(isFull)
+                cl_parent.addView(sf_camera,0,layoutParams)
             }
         }
     }
@@ -283,5 +308,27 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
     override fun onDestroy() {
         super.onDestroy()
         mCameraPresenter?.releaseCamera()
+    }
+
+
+    /**
+     * 获取屏幕宽高
+     *
+     */
+    fun getScreent():Array<Int>{
+        var screens = arrayOf<Int>(2)
+        //获取屏幕宽度
+        var metrics = DisplayMetrics()
+        windowManager.defaultDisplay.getMetrics(metrics)
+        var width = metrics.widthPixels
+        var height = metrics.heightPixels
+
+        //宽
+        screens[0] = width
+        //高
+        screens[1] = height
+
+        return screens
+
     }
 }
