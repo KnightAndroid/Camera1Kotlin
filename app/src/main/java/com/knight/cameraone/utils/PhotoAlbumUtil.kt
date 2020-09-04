@@ -113,7 +113,7 @@ class PhotoAlbumUtil {
 
              try {
                  cursor = context.contentResolver.query(uri,projection,selection,selectionArgs,null)
-                 if(cursor.moveToFirst()){
+                 if(cursor?.moveToFirst()!!){
                      var columnIndex : Int = cursor.getColumnIndexOrThrow(projection[0])
                      path = cursor.getString(columnIndex)
                  }

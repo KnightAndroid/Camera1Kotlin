@@ -7,6 +7,7 @@ import android.hardware.Camera
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.MotionEvent
+import android.view.OrientationEventListener
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
@@ -79,11 +80,18 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
 
     var isFull :Boolean = false
 
+
+    //传感器方向监听对象 监听屏幕旋转角度
+    var orientationEventListener:OrientationEventListener?=null
+    //拍照时方向(传感器角度方向 -> 转变而来)
+    var takePhotoOrientation:Int = 90
+
     @SuppressLint("WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_customcamera)
         getScreenBrightness()
+        initOrientate()
         initListener()
         //初始化CameraPresenter
         mCameraPresenter = CameraPresenter(this,sf_camera)
@@ -133,7 +141,7 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
             //切换全屏还是4：3
             R.id.tv_matchorwrap -> {
                 cl_parent.removeView(sf_camera)
-                var screen : Array<Int> = getScreent()
+                var screen : IntArray= getScreent()
                 //定义布局参数
                 var layoutParams : ConstraintLayout.LayoutParams = ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT,ConstraintLayout.LayoutParams.WRAP_CONTENT)
                 if(isFull){
@@ -260,11 +268,12 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
         iv_photo.setOnClickListener(this)
         tv_change_camera.setOnClickListener(this)
         tv_flash.setOnClickListener(this)
+        tv_matchorwrap.setOnClickListener(this)
         //点击事件
         tv_takephoto.setOnClickListener(object : CircleButtonView.OnClickListener{
             override fun onClick() {
                 //拍照的调用方法
-                mCameraPresenter?.takePicture()
+                mCameraPresenter?.takePicture(takePhotoOrientation)
             }
         })
 
@@ -308,6 +317,7 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
     override fun onDestroy() {
         super.onDestroy()
         mCameraPresenter?.releaseCamera()
+        orientationEventListener?.disable()
     }
 
 
@@ -315,8 +325,9 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
      * 获取屏幕宽高
      *
      */
-    fun getScreent():Array<Int>{
-        var screens = arrayOf<Int>(2)
+    fun getScreent():IntArray{
+      //  var screens = arrayOf<Int>(2)
+        val screens = IntArray(2)
         //获取屏幕宽度
         var metrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(metrics)
@@ -330,5 +341,37 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
 
         return screens
 
+    }
+
+
+    /**
+     *
+     * 初始化传感器方向 转为拍照方向
+     *
+     */
+    fun initOrientate(){
+         if(orientationEventListener == null){
+             orientationEventListener = object:OrientationEventListener(this){
+                 override fun onOrientationChanged(i: Int) {
+                     // i的范围是0-359
+                     // 屏幕左边在顶部的时候 i = 90;
+                     // 屏幕顶部在底部的时候 i = 180;
+                     // 屏幕右边在底部的时候 i = 270;
+                     // 正常的情况默认i = 0;
+                     if(i in 45..134){
+                         takePhotoOrientation = 180
+                     } else if(i in 135..224){
+                         takePhotoOrientation = 270
+                     } else if(i in 225..314){
+                         takePhotoOrientation = 0
+                     } else {
+                         takePhotoOrientation = 90
+                     }
+                 }
+
+             }
+         }
+
+        orientationEventListener?.enable()
     }
 }

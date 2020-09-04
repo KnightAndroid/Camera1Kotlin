@@ -32,9 +32,9 @@ import android.view.View
 class CircleButtonView : View {
 
     private val WHAT_LONG_CLICK:Int = 1
-    private var mBigCirclePaint:Paint?=null
-    private var mSmallCirclePaint:Paint?=null
-    private var mProgressCirclePaint:Paint?=null
+    private lateinit var mBigCirclePaint:Paint
+    private lateinit var mSmallCirclePaint:Paint
+    private lateinit var mProgressCirclePaint:Paint
     //当前View的高
     private var mHeight:Int = 0
     //当前View的宽

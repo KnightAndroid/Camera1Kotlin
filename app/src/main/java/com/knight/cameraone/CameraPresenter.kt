@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.*
 import android.hardware.Camera
 import android.media.MediaRecorder
+import android.os.Environment
 import android.os.Handler
 import android.os.Message
 import android.util.DisplayMetrics
@@ -13,6 +14,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.knight.cameraone.utils.ImageUtil
 import com.knight.cameraone.utils.SystemUtil
 import com.knight.cameraone.utils.ThreadPoolUtil
 import com.knight.cameraone.utils.ToastUtil
@@ -137,7 +139,10 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
      *
      */
     fun setUpFile() {
+        //方式1 这里是app的内部存储 这里要注意 不是外部私有目录 详情请看 Configuration这个类
         photosFile = File(Configuration.insidePath)
+        //方式2 这里改为app的外部存储私有存储目录(虽然是外部存储 但只能是本app自己存储) /storage/emulated/0/Android/data/com.knight.cameraone/Pictures
+        photosFile =  mAppCompatActivity.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         if (!photosFile!!.exists() || !photosFile!!.isDirectory) {
             var isSuccess: Boolean? = false
 
@@ -191,7 +196,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
      * 拍照
      *
      */
-    fun takePicture() {
+    fun takePicture(takePhotoOrientation:Int) {
         mCamera?.let {
             //拍照回调 点击拍照时回调
             it.takePicture(object : Camera.ShutterCallback {
@@ -212,8 +217,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
                     mCameraCallBack?.onTakePicture(data, camera)
                     //保存图片
                     if (data != null) {
-                        Log.d("ssd","进入保存图片")
-                        getPhotoPath(data)
+                        getPhotoPath(data,takePhotoOrientation)
                     }
                 }
             })
@@ -484,9 +488,17 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
                 }
             }
 
-            fitSize ?: targetSize
-            fitSize ?: targetSize2
-            fitSize ?: biggestSize
+           if(fitSize == null){
+               fitSize = targetSize
+           }
+
+           if(fitSize == null){
+               fitSize = targetSize2
+           }
+
+           if(fitSize == null){
+               fitSize = biggestSize
+           }
 
             mParameters?.setPreviewSize(fitSize?.width!!, fitSize?.height!!)
         }
@@ -723,7 +735,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
      *
      *
      */
-    fun getPhotoPath(data: ByteArray) {
+    fun getPhotoPath(data: ByteArray,takePhotoOrientation:Int) {
         ThreadPoolUtil.execute(object : Runnable {
             override fun run() {
                 var timeMillis: Long = System.currentTimeMillis()
@@ -731,7 +743,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
                 //拍照数量
                 photoNum++
                 //图片名字
-                var name: String = SystemUtil.formatTime(timeMillis, SystemUtil.formatTime(photoNum.toLong()) + ".jpg")
+                var name: String = SystemUtil.formatTime(timeMillis, SystemUtil.formatRandom(photoNum) + ".jpg")
                 //创建具体文件
                 var file = File(photosFile, name)
                 if (!file.exists()) {
@@ -761,15 +773,24 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
                     }
 
                     //将图片旋转
-                    rotateImageView(mCameraId, orientation, Configuration.insidePath + file.name)
+                    rotateImageView(mCameraId, takePhotoOrientation, file.absolutePath)
+                   // rotateImageView(mCameraId, takePhotoOrientation, Configuration.insidePath + file.name)
+
+
                     //将图片保存到手机相册
-                    SystemUtil.saveAlbum(Configuration.insidePath + file.name, file.name, mAppCompatActivity)
-                    //将图片复制到外部
-                    SystemUtil.copyPicture(Configuration.insidePath + file.name, Configuration.OUTPATH, file.name)
+                 //   SystemUtil.saveAlbum(Configuration.insidePath + file.name, file.name, mAppCompatActivity)
+                    //将图片复制到外部(target SDK 设置Android10以下)
+                //    SystemUtil.copyPicture(Configuration.insidePath + file.name, Configuration.OUTPATH, file.name)
+
+                    //将图片保存到手机相册 方式1
+                 //   SystemUtil.saveAlbum(file.absolutePath,file.name,mAppCompatActivity)
+                    //将图片保存到手机相册 方式2
+                    ImageUtil.saveAlbum(mAppCompatActivity,file)
+
                     var message = Message()
                     message.what = 1
-                    message.obj = Configuration.insidePath + file.name
-                    Log.d("ssd",message.obj.toString())
+                //    message.obj = Configuration.insidePath + file.name
+                    message.obj = file.absolutePath
                     mHandler.sendMessage(message)
                 } catch (e: FileNotFoundException) {
                     e.printStackTrace()
@@ -788,18 +809,26 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
     fun rotateImageView(cameraId: Int, orientation: Int, path: String) {
         var bitmap = BitmapFactory.decodeFile(path)
         var matrix = Matrix()
+        matrix.postRotate(orientation.toFloat())
         //创建新的图片
         var resizedBitmap: Bitmap? = null
         //0是后置
-        if (cameraId == 0) {
-            if (orientation == 90) {
-                matrix.postRotate(90f)
-            }
-        }
+//        if (cameraId == 0) {
+//            if (orientation == 90) {
+//                matrix.postRotate(90f)
+//            }
+//        }
+//
+//        //1是前置
+//        if (cameraId == 1) {
+//            matrix.postRotate(270f)
+//        }
 
         //1是前置
-        if (cameraId == 1) {
-            matrix.postRotate(270f)
+        if(cameraId == 1){
+            if(orientation == 90){
+                matrix.postRotate(180f)
+            }
         }
 
         //创建新的图片
