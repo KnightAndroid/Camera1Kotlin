@@ -37,7 +37,8 @@ class PlayAudioActivity : AppCompatActivity(), MediaPlayer.OnCompletionListener,
         player?.setOnCompletionListener(this)
         player?.setOnPreparedListener(this)
         //设置数据源，也就是播放文件地址，可以是网络地址
-        var dataPath = Configuration.OUTPATH + "/videomp4"
+        //var dataPath = Configuration.OUTPATH + "/videomp4"
+        var dataPath = intent.getStringExtra("videoPath")
 
         try {
             player?.setDataSource(dataPath)

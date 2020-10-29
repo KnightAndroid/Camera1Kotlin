@@ -3,6 +3,7 @@ package com.knight.cameraone
 import android.annotation.SuppressLint
 import android.graphics.*
 import android.hardware.Camera
+import android.media.CamcorderProfile
 import android.media.MediaRecorder
 import android.os.Environment
 import android.os.Handler
@@ -14,10 +15,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.knight.cameraone.utils.ImageUtil
-import com.knight.cameraone.utils.SystemUtil
-import com.knight.cameraone.utils.ThreadPoolUtil
-import com.knight.cameraone.utils.ToastUtil
+import com.knight.cameraone.utils.*
 import com.knight.cameraone.view.FaceDeteView
 import java.io.File
 import java.io.FileNotFoundException
@@ -78,6 +76,12 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
 
     private var isFull = false
 
+    //视频链接
+    private lateinit var videoFilePath:String
+
+    //录制视频
+    private lateinit var profile:CamcorderProfile
+
 
     fun setFull(full : Boolean){
         isFull = full
@@ -97,6 +101,10 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
 
         //拍照路径返回
         fun getPhotoFile(imagePath: String?)
+
+        //返回视频路径
+        fun getVideoFile(videoFilePath:String)
+
     }
 
     fun setCameraCallBack(mCameraCallBack: CameraCallBack) {
@@ -501,6 +509,7 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
            }
 
             mParameters?.setPreviewSize(fitSize?.width!!, fitSize?.height!!)
+            fixScreenSize(fitSize?.height!!,fitSize?.width!!)
         }
 
 
@@ -608,45 +617,57 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
         var parameters: Camera.Parameters? = mCamera?.parameters
         //得到系统支持视频尺寸
         var videoSize: List<Camera.Size>? = parameters?.supportedVideoSizes
-        for (index in 0 until videoSize?.size!!) {
-            var w: Int = videoSize!![index].width
-            var h: Int = videoSize!![index].height
-            if (biggest_width == 0 && biggest_height == 0 || w >= biggest_height && h >= biggest_width) {
-                biggest_width = w
-                biggest_height = h
-            }
+        var mSUpportedPreviewSizes = parameters?.supportedPreviewSizes
 
-            if (w == screenHeight && h == screenWidth) {
-                width = w
-                height = h
-            } else if (w == screenHeight || h == screenWidth) {
-                if (width == 0 || height == 0) {
-                    fitSize_width = w
-                    fitSize_height = h
+//        for (index in 0 until videoSize?.size!!) {
+//            var w: Int = videoSize!![index].width
+//            var h: Int = videoSize!![index].height
+//            if (biggest_width == 0 && biggest_height == 0 || w >= biggest_height && h >= biggest_width) {
+//                biggest_width = w
+//                biggest_height = h
+//            }
+//
+//            if (w == screenHeight && h == screenWidth) {
+//                width = w
+//                height = h
+//            } else if (w == screenHeight || h == screenWidth) {
+//                if (width == 0 || height == 0) {
+//                    fitSize_width = w
+//                    fitSize_height = h
+//
+//                } else if (w < screenHeight || h < screenWidth) {
+//                    fitSize_widthBig = w
+//                    fitSize_heightBig = h
+//
+//                }
+//            }
+//        }
+//
+//        if (width == 0 && height == 0) {
+//            width = fitSize_width
+//            height = fitSize_height
+//        }
+//
+//        if (width == 0 && height == 0) {
+//            width = fitSize_widthBig
+//            height = fitSize_heightBig
+//        }
+//
+//        if (width == 0 && height == 0) {
+//            width = biggest_width
+//            height = biggest_height
+//
+//        }
 
-                } else if (w < screenHeight || h < screenWidth) {
-                    fitSize_widthBig = w
-                    fitSize_heightBig = h
 
-                }
-            }
-        }
+        val optimalSize = CameraHelper.getOptimalVideoSize(videoSize,mSUpportedPreviewSizes,mSurfaceView.width,mSurfaceView.height)
 
-        if (width == 0 && height == 0) {
-            width = fitSize_width
-            height = fitSize_height
-        }
+        // Use the same size for recording profile.
+        profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH)
+        profile.videoFrameWidth = optimalSize.width
+        profile.videoFrameHeight = optimalSize.height
 
-        if (width == 0 && height == 0) {
-            width = fitSize_widthBig
-            height = fitSize_heightBig
-        }
 
-        if (width == 0 && height == 0) {
-            width = biggest_width
-            height = biggest_height
-
-        }
 
 
     }
@@ -875,17 +896,15 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
             //视频源 camera
             it.setVideoSource(MediaRecorder.VideoSource.CAMERA)
             //输出格式
-            it.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            //音频编码
-            it.setAudioEncoder(MediaRecorder.VideoEncoder.DEFAULT)
-            //视频编码
+            it.setOutputFormat(profile.fileFormat)
+            //设置录制的视频编码比特率 会影响清晰
+            it.setVideoEncodingBitRate(5 * 1024 * 1024)
+            //设置视频编码器
             it.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            //设置帧频率
-            it.setVideoEncodingBitRate(1 * 1024 * 1024 * 100)
-            Log.d("sssd视频宽高：", "宽" + width + "高" + height + "")
-            it.setVideoSize(width, height)
-            //每秒的帧数
-            it.setVideoFrameRate(20)
+            //设置Audio编码格式
+            it.setAudioEncoder(MediaRecorder.VideoEncoder.DEFAULT)
+            //设置捕获的视频宽度和高度
+            it.setVideoSize(profile.videoFrameWidth,profile.videoFrameHeight)
 
             //调视频旋转角度 如果不设置 后置和前置都会被旋转播放
             if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT) {
@@ -907,11 +926,13 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
 
 
             //设置输出文件名字
-            it.setOutputFile(path + File.separator + name + "mp4")
-            var file1 = File(path + File.separator + name + "mp4")
+            it.setOutputFile(path + File.separator + name + ".mp4")
+            var file1 = File(path + File.separator + name + ".mp4")
             if (file1.exists()) {
                 file1.delete()
             }
+
+            videoFilePath = path + File.separator + name + ".mp4"
 
             //设置预览
             it.setPreviewDisplay(mSurfaceView.holder.surface)
@@ -939,10 +960,72 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
     fun stopRecord() {
         mediaRecorder?.release()
         mediaRecorder = null
+        mCameraCallBack?.getVideoFile(videoFilePath)
         mCamera?.release()
         openCamera(mCameraId)
         //并设置预览
         startPreview()
+    }
+
+
+    /**
+     *
+     *
+     * 获取视频文件链接
+     */
+    fun getVideoFilePath():String{
+       return videoFilePath
+    }
+
+
+    /**
+     *
+     * 适配华为p40pro
+     *
+     */
+    fun fixScreenSize(fitSizeHeight:Int,fitSizeWidth:Int){
+        //预览 View的大小 比如SurfaceView
+        var viewHeight = screenHeight
+        var viewWidth = screenWidth
+
+        // 相机选择的预览尺寸
+        var cameraHeight = fitSizeWidth
+        var cameraWidth = fitSizeHeight
+
+        //计算出将相机的尺寸 => View的尺寸需要缩放倍数
+        var ratioPreview = cameraWidth.toFloat() / cameraHeight
+        var ratioView = viewWidth.toFloat() / viewHeight
+        var scaleX = 0f
+        var scaleY = 0f
+
+        if(ratioView < ratioPreview){
+            scaleX = ratioPreview / ratioView
+            scaleY = 1f
+        } else {
+            scaleX = 1f
+            scaleY = ratioView / ratioPreview
+        }
+
+        //计算出View的偏移量
+        var scaledWidth = viewWidth * scaleX
+        var scaledHeight = viewHeight * scaleY
+
+        var dx = (viewWidth - scaledWidth) / 2
+        var dy = (viewHeight - scaledHeight) / 2
+
+        var matrix = Matrix()
+        matrix.postScale(scaleX,scaleY)
+        matrix.postTranslate(dx,dy)
+
+        val values = FloatArray(9)
+
+        matrix.getValues(values)
+
+        mSurfaceView.translationX = values[Matrix.MTRANS_X]
+        mSurfaceView.translationY = values[Matrix.MTRANS_Y]
+        mSurfaceView.scaleX = values[Matrix.MSCALE_X]
+        mSurfaceView.scaleY = values[Matrix.MSCALE_Y]
+        mSurfaceView.invalidate()
     }
 
 

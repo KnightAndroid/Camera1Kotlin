@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.RectF
 import android.hardware.Camera
 import android.os.Bundle
+import android.os.Environment
 import android.util.DisplayMetrics
 import android.view.MotionEvent
 import android.view.OrientationEventListener
@@ -204,6 +205,9 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
         mPhotosAdapter?.notifyDataSetChanged()
     }
 
+    override fun getVideoFile(videoFilePath: String) {
+    }
+
     override fun onTouch(v: View, event: MotionEvent): Boolean {
         //无论多少跟手指加进来，都是MotionEvent.ACTION_DWON MotionEvent.ACTION_POINTER_DOWN
         //MotionEvent.ACTION_MOVE:
@@ -285,11 +289,16 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
 
             override fun onRecordFinishedListener() {
                  mCameraPresenter?.stopRecord()
-                 startActivity(Intent(this@CustomCameraActivity,PlayAudioActivity::class.java))
+                 startActivity(Intent(this@CustomCameraActivity,PlayAudioActivity::class.java)
+                     .putExtra("videoPath",mCameraPresenter?.getVideoFilePath())
+
+                 )
             }
 
             override fun onLongClick() {
-                mCameraPresenter?.startRecord(Configuration.OUTPATH,"video")
+                //视频文件/storage/emulated/0/Android/data/com.knight.cameraone/files/Movies 下
+                mCameraPresenter?.startRecord(getExternalFilesDir(Environment.DIRECTORY_MOVIES)?.path!!,"video")
+//                mCameraPresenter?.startRecord(Configuration.OUTPATH,"video")
             }
         })
 
