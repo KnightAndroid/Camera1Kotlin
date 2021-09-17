@@ -59,7 +59,9 @@ class PhotosAdapter(private var photoLists:List<String>): RecyclerView.Adapter<P
     }
 
     override fun onClick(v: View?) {
-
+        if (photoLists != null) {
+            onItemClickListener!!.onItemClick(v!!, photoLists[v.tag as Int])
+        }
     }
 
     inner class ViewHolder(itemView:View): RecyclerView.ViewHolder(itemView){

@@ -7,10 +7,7 @@ import android.hardware.Camera
 import android.os.Bundle
 import android.os.Environment
 import android.util.DisplayMetrics
-import android.view.MotionEvent
-import android.view.OrientationEventListener
-import android.view.View
-import android.view.WindowManager
+import android.view.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -54,7 +51,6 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
 
     //逻辑层
     var mCameraPresenter:CameraPresenter?=null
-
     val MODE_INIT:Int = 0
     //两个触摸点触摸屏幕状态
     val MODE_ZOOM:Int = 1
@@ -90,6 +86,8 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
     @SuppressLint("WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_customcamera)
         getScreenBrightness()
         initOrientate()
@@ -131,6 +129,7 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
             R.id.tv_flash ->{
                 mCameraPresenter?.turnLight(isTurn)
                 tv_flash.setBackgroundResource(if(isTurn)R.drawable.icon_turnon else R.drawable.icon_turnoff )
+                Configuration.flaseState = isTurn
                 isTurn = !isTurn
             }
             //开启人脸检测
@@ -148,12 +147,14 @@ class CustomCameraActivity:AppCompatActivity(), View.OnClickListener, CameraPres
                 if(isFull){
                     //是全屏 切换成4：3
                     layoutParams.width = screen[0]
-                    layoutParams.height = screen[0] * 4/3
+                    layoutParams.height = screen[0] / 9 * 16
+                    tv_matchorwrap.text = "全屏模式"
                 } else {
                     //不是全屏
                     //是全屏 切换成4：3
                     layoutParams.width = screen[0]
                     layoutParams.height = screen[1]
+                    tv_matchorwrap.text = "半屏模式"
                 }
                 sf_camera.layoutParams = layoutParams
                 isFull = !isFull

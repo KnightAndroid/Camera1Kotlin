@@ -328,7 +328,6 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
        releaseCamera()
        //在Android P之前 Android设备仍然最多只有前后两个摄像头，在Android p后支持多个摄像头 用户想打开哪个就打开哪个
        mCameraId = (mCameraId + 1) % Camera.getNumberOfCameras()
-        Log.d("ssd",mCameraId.toString())
        //打开摄像头
        openCamera(mCameraId)
        //切换摄像头之后开启预览
@@ -888,6 +887,9 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
     fun startRecord(path: String, name: String) {
         //解锁Camera硬件
         mCamera?.unlock()
+        if (mediaRecorder == null) {
+            mediaRecorder = MediaRecorder();
+        }
         mediaRecorder?: MediaRecorder()
         mediaRecorder?.let {
             it.setCamera(mCamera)
@@ -1027,6 +1029,8 @@ class CameraPresenter(mAppCompatActivity: AppCompatActivity, mSurfaceView: Surfa
         mSurfaceView.scaleY = values[Matrix.MSCALE_Y]
         mSurfaceView.invalidate()
     }
+
+
 
 
 }

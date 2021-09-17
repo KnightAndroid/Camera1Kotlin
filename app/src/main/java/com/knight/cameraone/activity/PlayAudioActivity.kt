@@ -1,10 +1,13 @@
 package com.knight.cameraone.activity
 
+import android.content.pm.ActivityInfo
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
 import android.view.SurfaceHolder
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import com.knight.cameraone.Configuration
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.knight.cameraone.R
 import kotlinx.android.synthetic.main.activity_playaudio.*
 
@@ -27,7 +30,10 @@ class PlayAudioActivity : AppCompatActivity(), MediaPlayer.OnCompletionListener,
 
 
     var player:MediaPlayer?=null
+    var surfaceWidth:Int = 0
+    var surfaceHeight:Int = 0
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playaudio)
@@ -36,6 +42,10 @@ class PlayAudioActivity : AppCompatActivity(), MediaPlayer.OnCompletionListener,
         player = MediaPlayer()
         player?.setOnCompletionListener(this)
         player?.setOnPreparedListener(this)
+        sf_play.post {
+            surfaceWidth = sf_play.width
+            surfaceHeight = sf_play.height
+        }
         //设置数据源，也就是播放文件地址，可以是网络地址
         //var dataPath = Configuration.OUTPATH + "/videomp4"
         var dataPath = intent.getStringExtra("videoPath")
@@ -64,8 +74,45 @@ class PlayAudioActivity : AppCompatActivity(), MediaPlayer.OnCompletionListener,
 
         })
 
+        player?.setOnVideoSizeChangedListener { mp, width, height ->
+            changeVideoSize()
+        }
 
     }
+
+    /**
+     *
+     * 计算播放视频的宽高
+     */
+    private fun changeVideoSize() {
+        var videoWidth = player?.videoWidth
+        var videoHeight = player?.videoHeight
+        //根据视频尺寸去计算->视频可以在sufaceView中放大的最大倍数。
+        var max:Float
+        if (resources.configuration.orientation === ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+            //竖屏模式下按视频宽度计算放大倍数值
+            max = Math.max(
+                videoWidth?.toFloat()!! / surfaceWidth.toFloat(),
+                videoHeight?.toFloat()!! / surfaceHeight.toFloat()
+            )
+        } else {
+            //横屏模式下按视频高度计算放大倍数值
+            max = Math.max(
+                videoWidth?.toFloat()!! / surfaceHeight.toFloat(),
+                videoHeight?.toFloat()!! / surfaceWidth.toFloat()
+            )
+        }
+        //视频宽高分别/最大倍数值 计算出放大后的视频尺寸
+        videoWidth = Math.ceil(videoWidth?.toFloat() / max.toDouble()).toInt()
+        videoHeight = Math.ceil(videoHeight?.toFloat() / max.toDouble()).toInt()
+        //无法直接设置视频尺寸，将计算出的视频尺寸设置到surfaceView 让视频自动填充。
+        val sfPlayLayoutParams: ConstraintLayout.LayoutParams =
+            sf_play.layoutParams as ConstraintLayout.LayoutParams
+        sfPlayLayoutParams.height = videoHeight
+        sfPlayLayoutParams.width = videoWidth
+        sf_play.layoutParams = sfPlayLayoutParams
+    }
+
 
     /**
      * 设置循环播放

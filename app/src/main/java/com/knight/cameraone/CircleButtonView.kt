@@ -13,6 +13,8 @@ import android.os.Message
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import com.knight.cameraone.utils.CameraUtils
+import com.knight.cameraone.utils.ToastUtil
 
 
 /**
@@ -64,6 +66,7 @@ class CircleButtonView : View {
     private var isPresseds:Boolean = false
     //圆弧进度变化
     private var mProgressAni:ValueAnimator?=null
+    private lateinit var mContext : Context
 
 
 
@@ -71,7 +74,7 @@ class CircleButtonView : View {
 
 
 
-    constructor(context : Context) :super(context){
+    constructor(context: Context, mContext: Context) :super(context){
         init(context,null)
     }
 
@@ -91,6 +94,7 @@ class CircleButtonView : View {
      *
      */
     fun init(context: Context,attrs:AttributeSet?){
+        this.mContext = context;
         var a = context.obtainStyledAttributes(attrs,R.styleable.CircleButtonView)
         mMinTime = a.getInt(R.styleable.CircleButtonView_minTime,0)
         mTime = a.getInt(R.styleable.CircleButtonView_maxTime,10)
@@ -169,9 +173,14 @@ class CircleButtonView : View {
             super.handleMessage(msg)
             when(msg?.what){
                 WHAT_LONG_CLICK -> {
-                    onLongClickListener?.onLongClick()
-                    //内外圆动画，内圆缩小，外圆放大
-                    startAnimation(mBigRadius,mBigRadius * 1.33f,mSmallRadius,mSmallRadius * 0.7f)
+                    if (!CameraUtils.flashState()) {
+                        onLongClickListener?.onLongClick()
+                        //内外圆动画，内圆缩小，外圆放大
+                        startAnimation(mBigRadius,mBigRadius * 1.33f,mSmallRadius,mSmallRadius * 0.7f)
+                    } else {
+                        ToastUtil.showShortToast(mContext,"请关闭闪光灯在录制")
+                    }
+
                 }
 
 
@@ -198,17 +207,20 @@ class CircleButtonView : View {
                     onClickListener?.onClick()
 
                 }else{
-                    startAnimation(mBigRadius, mInitBitRadius, mSmallRadius, mInitSmallRadius)//手指离开时动画复原
-                    if(mProgressAni != null && mProgressAni?.currentPlayTime!! / 1000 < mMinTime && !isMaxTime){
-                         onLongClickListener?.onNoMinRecord(mMinTime)
-                        mProgressAni?.cancel()
-                    }else{
-                        //录制完成
-                        if(!isMaxTime){
-                            onLongClickListener?.onRecordFinishedListener()
+                    if (!CameraUtils.flashState()) {
+                        startAnimation(mBigRadius, mInitBitRadius, mSmallRadius, mInitSmallRadius)//手指离开时动画复原
+                        if(mProgressAni != null && mProgressAni?.currentPlayTime!! / 1000 < mMinTime && !isMaxTime){
+                            onLongClickListener?.onNoMinRecord(mMinTime)
+                            mProgressAni?.cancel()
+                        }else{
+                            //录制完成
+                            if(!isMaxTime){
+                                onLongClickListener?.onRecordFinishedListener()
 
+                            }
                         }
                     }
+
 
                 }
             }
@@ -300,7 +312,10 @@ class CircleButtonView : View {
                     true -> {
                         isPresseds=false
                         isMaxTime = true
-                        onLongClickListener?.onRecordFinishedListener()
+                        if (!CameraUtils.flashState()) {
+                            onLongClickListener?.onRecordFinishedListener()
+                        }
+
                         startAnimation(mBigRadius,mInitBitRadius,mSmallRadius,mInitSmallRadius)
                         //隐藏进度条
                         mCurrentProgress = 0f

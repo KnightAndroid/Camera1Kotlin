@@ -21,6 +21,9 @@ import android.os.Environment
 //→某种程度上，Objects可以解决由于没有static而造成的麻烦
 //静态类
 object  Configuration {
+
+    //闪光灯状态
+    var flaseState : Boolean = false;
     //这是app内部存储 格式如下 /data/data/包名/xxx/ 内部存储在Android系统对应的根目录是 /data/data/，这个目录普通用户是无权访问的，用户需要root权限才可以查看
     val insidePath : String = "/data/data/com.knight.cameraone/pic/"
 
